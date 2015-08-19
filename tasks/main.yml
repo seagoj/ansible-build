@@ -1,0 +1,16 @@
+---
+- name: Install Taiga Issue Tracker
+  include: taiga.yml
+  when: source == 'script' or source is undefined
+
+- name: Install Taiga Issue tracker
+  include: taiga_from_source.yml
+  when: source == 'source'
+
+- name: Install Jenkins Build Manager
+  sudo: true
+  include: jenkins.yml
+
+- name: Install Hubot
+  sudo: true
+  include: hubot.yml

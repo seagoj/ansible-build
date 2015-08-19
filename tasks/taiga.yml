@@ -1,0 +1,133 @@
+---
+- name: Install htop
+  apt:
+    name: htop
+    state: latest
+
+- name: Install Git
+  apt:
+    name: git
+    state: latest
+
+- name: Checkout taiga-scripts
+  git:
+    repo: https://github.com/taigaio/taiga-scripts.git
+    dest: /home/taiga/taiga-scripts
+
+# - name: Create directories
+#   file:
+#     path: ~/{{ item }}
+#     state: directory
+#   with_items:
+#     - logs
+#     - conf
+
+# - name: Copy config files
+#   copy:
+#     src: "{{ item }}"
+#     dest: ~/{{ item }}
+#     owner: taiga
+#     group: taiga
+#   with_items:
+#     - .vimrc
+#     - .tmux-conf.sh
+#     - .bash_profile
+
+# - name: Update Apt
+#   apt:
+#     update_cache: yes
+#     upgrade: yes
+
+# - name: Upgrade dist
+#   apt:
+#     upgrade: dist
+
+# - name: Install Postgres
+#   apt:
+#     name: "{{ item }}"
+#     state: latest
+#   with_items:
+#     - postgresql-9.3
+#     - postgresql-contrib-9.3
+#     - postgresql-doc-9.3
+#     - postgresql-server-dev-9.3
+#   notify:
+#     - create postgres user
+
+# - name: Install buildessential
+#   apt:
+#     name: "{{ item }}"
+#     state: latest
+#   with_items:
+#     - build-essential
+#     - binutils-doc
+#     - autoconf
+#     - flex
+#     - bison
+#     - libjpeg-dev
+#     - libfreetype6-dev
+#     - zlib1g-dev
+#     - libzmq3-dev
+#     - libgdbm-dev
+#     - libncurses5-dev
+#     - automake
+#     - libtool
+#     - libffi-dev
+#     - curl
+#     - gettext
+#     - git
+#     - tmux
+#     - python3
+#     - python3-pip
+#     - python-dev
+#     - python3-dev
+#     - python-pip
+#     - virtualenvwrapper
+#     - libxml2-dev
+#     - libxslt1-dev
+
+# - name: Source virtualenvwrapper
+#   shell: source /usr/share/virtualenvwrapper/virtualenvwrapper_lazy.sh
+
+- name: Install Taiga
+  sudo: false
+  shell: ./setup-server.sh
+  args:
+    chdir: /home/taiga/taiga-scripts
+    creates: /home/taiga/taiga-back
+  register: output
+# async: 3600
+# poll: 60
+
+- name: Install Taiga-Slack
+  pip:
+    executable: pip
+    name: taiga-contrib-slack
+    virtualenv: ~/.virtualenvs/taiga
+
+- name: append to taiga config
+  lineinfile:
+    dest: /home/taiga/taiga-back/settings/local.py
+    line: 'INSTALLED_APPS += ["taiga_contrib_slack"]'
+
+- name: Run migrations
+  shell: ". /home/taiga/.virtualenvs/taiga/bin/activate && cd /home/taiga/taiga-back && python3 manage.py migrate taiga_contrib_slack"
+  args:
+    creates: /usr/local/bin/csscombine
+
+# - name: Taiga Slack version
+#   shell: '. /home/taiga/.virtualenvs/taiga/bin/activate && pip show taiga-contrib-slack | awk "/^Version: /{print $2}"'
+#   register: version
+
+- name: Download Taiga Front for slack
+  command: wget "https://raw.githubusercontent.com/taigaio/taiga-contrib-slack/0.0.8/front/dist/slack.js"
+  args:
+    chdir: /home/taiga/taiga-front/dist/js
+    creates: /home/taiga/taiga-front/dist/js/slack.js
+
+- name: Enable slack in plugins
+  lineinfile:
+    dest: /home/taiga/taiga-front/dist/js/conf.json
+    state: present
+    regexp: '"contribPlugins"\: \[\]'
+    line: '"contribPlugins": ["/js/slack.js"]'

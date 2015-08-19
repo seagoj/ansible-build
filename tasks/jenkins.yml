@@ -1,0 +1,35 @@
+---
+- name: Install apt-key
+  apt_key:
+    url: https://jenkins-ci.org/debian/jenkins-ci.org.key
+    state: present
+
+- name: Prepare debian file
+  command: "sudo sh -c 'echo deb http://pkg.jenkins-ci.org/debian binary/ > /etc/apt/sources.list.d/jenkins.list'"
+  args:
+    creates: /etc/apt/sources.list.d/jenkins.list
+
+- name: Install Jenkins
+  apt:
+    name: jenkins
+    state: latest
+    update_cache: yes
+
+- name: Start Jenkins service
+  service:
+    name: jenkins
+    state: started
+    enabled: yes
+
+- name: Configure Nginx Proxy
+  copy:
+    src: sites-available/jenkins
+    dest: /etc/nginx/sites-available/jenkins
+
+- name: Enable jenkins proxy
+  file:
+    src: /etc/nginx/sites-available/jenkins
+    dest: /etc/nginx/sites-enabled/jenkins
+    state: link
+  notify:
+   - restart nginx

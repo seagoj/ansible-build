@@ -1,0 +1,8 @@
+- name: restart nginx
+  service:
+    name: nginx
+    state: restarted
+    enabled: true
+
+- name: create postgres user
+  shell: sudo -u postgres createuser --superuser $USER &> /dev/null && sudo -u postgres createdb $USER &> /dev/null

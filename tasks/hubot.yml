@@ -1,0 +1,57 @@
+---
+- name: Prepare apt for node installation
+  shell: "curl --silent --location https://deb.nodesource.com/setup_0.12 | sudo bash -"
+
+- name: Install prereqs
+  apt:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - nodejs
+    - build-essential
+    - libssl-dev
+    - git-core
+    - redis-server
+    - libexpat1-dev
+
+- name: Install required global node modules
+  npm:
+    name: "{{ item }}"
+    state: latest
+    global: yes
+  with_items:
+    - hubot
+    - coffee-script
+    - yo
+    - generator-hubot
+
+- name: Create hubot directory
+  file:
+    path: /opt/hubot
+    owner: taiga
+    state: directory
+
+- name: Install hubot-slack
+  command: npm install hubot-slack --save
+  args:
+    chdir: /opt/hubot
+    creates: /opt/hubot/node_modules/hubot-slack
+
+- name: Initialize Git
+  command: git init
+  args:
+    chdir: /opt/hubot
+
+- name: Copy Service file
+  copy:
+    src: init.d/hubot
+    dest: /etc/init.d/hubot
+    owner: root
+    group: root
+    mode: 0744
+
+- name: start service
+  service:
+    name: hubot
+# state: started
+    enabled: yes
